@@ -12,9 +12,120 @@
         padding: 0;
         margin: 0;
       }
+
+      body {
+        width: 100%;
+      }
+
+      #main {
+        display: flex;
+        justify-content: space-evenly;
+      }
+
+      #container {
+        width: 400px;
+      }
+
+      #container > #message_container {
+        width: inherit;
+      }
+
+      #container > #chat_box_container {
+        position: fixed;
+        bottom: 0;
+      }
+
+      #container > #chat_box_container > #chat_form > #chat_input {
+        padding: 1rem 0.5rem;
+        font-size: 1.2rem;
+      }
+
+      #container > #chat_box_container > #chat_form > button {
+        padding: 1rem 0.5rem;
+        cursor: pointer;
+        font-size: 1.2rem;
+      }
     </style>
   </head>
   <body>
-    <script></script>
+    <div id="main">
+      <div id="container">
+        <div id="message_container"></div>
+        <div id="chat_box_container">
+          <form action="" id="chat_form" autocomplete="off">
+            <input
+              type="text"
+              id="chat_input"
+              placeholder="Type something..."
+            />
+            <button type="submit">Send chat</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="notification_bar">
+        <p>Notification <span id="notif_count">0</span></p>
+        <div id="notif_content"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+      const socket = io('ws://localhost:8000', {});
+
+      socket.on('connect', () => {
+        console.log('Client socket connected, id:', socket.id);
+      });
+
+      socket.on('connect_error', () => {
+        console.log('Client failed to connect to server');
+        socket.connect();
+      });
+
+      socket.on('disconnect', () => {
+        console.log('Client disconnected from server');
+      });
+
+      const chat_input = document.getElementById('chat_input');
+      const form = document.getElementById('chat_form');
+      const chat_container = document.getElementById('message_container');
+      const notif_count = document.getElementById('notif_count');
+      const notif_content = document.getElementById('notif_content');
+
+      form.addEventListener('submit', (evt) => {
+        evt.preventDefault();
+
+        let chat = chat_input.value;
+
+        // Send chat content to server
+        socket.emit('chat:sent', chat);
+        chat_form.value = '';
+      });
+
+      // Handle received chat for proper rendering
+      socket.on('chat:recieved', (chat) => {
+        const chat_message = document.createElement('p');
+        chat_message.id = 'chat_message';
+        chat_message.style.fontSize = '1.2rem';
+
+        chat_message.innerHTML = chat;
+
+        chat_container.appendChild(chat_message);
+      });
+
+      let count = parseInt(notif_count.innerHTML);
+      socket.on('account:update', (payload) => {
+        const { username, description } = payload;
+
+        count++;
+        notif_count.innerHTML = count;
+
+        const notif = document.createElement('p');
+        notif.style.fontSize = '1.2rem';
+
+        notif.innerHTML = `@${username}, your ${description}`;
+        notif_content.appendChild(notif);
+      });
+    </script>
   </body>
 </html>
